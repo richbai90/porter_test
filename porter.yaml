@@ -1,0 +1,80 @@
+name: porter_test
+version: 0.2.5
+schemaVersion: 1.0.0-alpha.1
+description: A simple test
+registry: localhost:5015
+parameters:
+  - name: restore
+    type: directory
+    path: /restore
+    uid: 1001
+    gid: 1001
+    writeable: true
+    source:
+      mount:
+        source: $HOME/restore
+  - name: socketpath
+    type: directory
+    path: /libvirt
+    writeable: false
+    source:
+      mount:
+        source: $HOME/.cache/libvirt
+  - name: storage_pool
+    type: directory
+    path: /pool
+    writeable: true
+    source:
+      mount:
+        source: $HOME/vms
+  - name: socket
+    type: string
+    default: libvirt-sock
+  - name: loglevel
+    default: INFO
+    env: TF_LOG
+state:
+  - name: tfstate
+    path: terraform.tfstate
+  
+dockerfile: template.Dockerfile
+
+mixins:
+  - socat:
+  - exec:
+  - terraform:
+      clientVersion: 1.2.5
+      initFile: init.tf
+  # - xfer:
+  #     sources:
+  #       - kind: directory
+  #         value: filexfer
+install:
+  - socat:
+      leftAddress:
+        address: UNIX-LISTEN:/libvirt-sock
+        options:
+          - fork
+          - reuseaddr
+          - ignoreeof
+          - forever
+      rightAddress:
+        address: UNIX-CLIENT:{{bundle.parameters.socketpath.path}}/{{bundle.parameters.socket}}
+        options:
+          - reuseaddr
+          - ignoreeof
+          - forever
+  # - xfer:
+  #     description: File Transfer
+  #     destination: "{{bundle.parameters.restore.path}}"
+  - terraform:
+      description: Create kubernetes cluster
+      vars:
+        socketpath: "/"
+        socket: "{{bundle.parameters.socket}}"
+        storage_pool: "{{bundle.parameters.storage_pool.source.Mount.Source}}"
+        srcdir: "{{bundle.parameters.restore.source.Mount.Source}}"
+
+uninstall:
+  - exec:
+      description: Obligatory uninstall step

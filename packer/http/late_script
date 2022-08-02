@@ -1,0 +1,5 @@
+#! /bin/sh
+if [ -x "/target/sbin/rdnssd" -a ! -x "/target/sbin/resolvconf" ] ; then
+  in-target systemctl disable rdnssd.service ;
+fi
+sed -E 's/#[[:space:]]?net.ipv4.ip_forward/net.ipv4.ip_forward/' /target/etc/sysctl.conf

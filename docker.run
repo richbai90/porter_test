@@ -1,0 +1,9 @@
+#!/bin/bash
+img=$(docker images -q "$(porter build --debug 2>&1 | grep "naming to" | awk '{print $4}')")
+docker run -it --mount type=bind,src=/run/host-services/ssh-auth.sock,target=/run/host-services/ssh-auth.sock \
+           -v test:/target \
+           -v $HOME/xfer:/xfer \
+           -v $HOME/porter:/porter \
+           -v /var/run/docker.sock:/var/run/docker.sock \
+           "$img" /bin/bash && \
+rm ./*.tar.gz
